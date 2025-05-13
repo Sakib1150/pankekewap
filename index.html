@@ -1,4 +1,5 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html>
 <head>
   <title>PankekeWap (Testnet)</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
@@ -13,11 +14,13 @@
   <div class="box">
     <h2>PankekeWap (BSC Testnet)</h2>
     <button onclick="connectWallet()">Connect Wallet</button>
-    <div id="wallet" class="balance"></div>
-    <div id="bnb" class="balance"></div>
+    <div id="wallet" class="balance">Wallet: Not Connected</div>
+    <div id="bnb" class="balance">Balance: 0.00 BNB</div>
     <button onclick="swapBNBtoToken()">Swap 0.01 BNB to Token</button>
     <p style="margin-top:20px;color:gray;">This is a demo on BSC Testnet</p>
-  </div>  <script>
+  </div>
+
+  <script>
     const tokenAddress = "0xEc0EA1a818050F518D5498ee8456BE219D70161F";
     const wbnbAddress = "0xae13d989dac2f0debff460ac112a837c89baa7cd";
     const pancakeRouterTestnet = "0x9ac64cc6e4415144c455bd8e4837fea55603e5c3";
@@ -26,39 +29,47 @@
     async function connectWallet() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const accounts = await web3.eth.getAccounts();
-        user = accounts[0];
-        document.getElementById("wallet").innerText = `Wallet: ${user}`;
-        getBalance();
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          user = accounts[0];
+          document.getElementById("wallet").innerText = `Wallet: ${user}`;
+          getBalance();
+        } catch (err) {
+          alert("Wallet connection denied.");
+        }
       } else {
         alert("Please install MetaMask");
       }
     }
 
     async function getBalance() {
-      const balance = await web3.eth.getBalance(user);
-      document.getElementById("bnb").innerText = `Balance: ${web3.utils.fromWei(balance)} BNB`;
+      try {
+        const balanceWei = await web3.eth.getBalance(user);
+        const balanceBNB = web3.utils.fromWei(balanceWei, "ether");
+        document.getElementById("bnb").innerText = `Balance: ${parseFloat(balanceBNB).toFixed(4)} BNB`;
+      } catch (err) {
+        document.getElementById("bnb").innerText = "Error fetching balance";
+      }
     }
 
     async function swapBNBtoToken() {
       const router = new web3.eth.Contract([
         {
           "inputs": [
-            {"internalType":"uint256","name":"amountOutMin","type":"uint256"},
-            {"internalType":"address[]","name":"path","type":"address[]"},
-            {"internalType":"address","name":"to","type":"address"},
-            {"internalType":"uint256","name":"deadline","type":"uint256"}
+            { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
+            { "internalType": "address[]", "name": "path", "type": "address[]" },
+            { "internalType": "address", "name": "to", "type": "address" },
+            { "internalType": "uint256", "name": "deadline", "type": "uint256" }
           ],
-          "name":"swapExactETHForTokens",
-          "outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],
-          "stateMutability":"payable",
-          "type":"function"
+          "name": "swapExactETHForTokens",
+          "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
+          "stateMutability": "payable",
+          "type": "function"
         }
       ], pancakeRouterTestnet);
 
       const amountIn = web3.utils.toWei("0.01", "ether");
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+      const deadline = Math.floor(Date.now() / 1000) + 600;
       const path = [wbnbAddress, tokenAddress];
 
       try {
@@ -68,8 +79,9 @@
         getBalance();
       } catch (err) {
         console.error(err);
-        alert("Swap Failed");
+        alert("Swap Failed: " + err.message);
       }
     }
-  </script></body>
+  </script>
+</body>
 </html>
