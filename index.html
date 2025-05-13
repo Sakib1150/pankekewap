@@ -1,72 +1,75 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pankekewap - Fake WalletConnect</title>
+  <title>PankekeWap (Testnet)</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
   <style>
-    body {
-      background: #0d1117;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 2rem;
-    }
-    .container {
-      max-width: 400px;
-      margin: auto;
-      background: #161b22;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #00000055;
-    }
-    select, input, button {
-      width: 100%;
-      margin: 0.5rem 0;
-      padding: 1rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      background: #3b82f6;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    body { font-family: Arial; background: #f7f7f7; text-align: center; padding: 40px; }
+    .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; }
+    button { padding: 10px 20px; margin-top: 15px; cursor: pointer; border: none; background: #ffb200; border-radius: 5px; font-weight: bold; }
+    .balance { margin-top: 10px; font-weight: bold; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>pankekewap</h1>
-    <p>Connect your wallet to begin swapping.</p>
+  <div class="box">
+    <h2>PankekeWap (BSC Testnet)</h2>
     <button onclick="connectWallet()">Connect Wallet</button>
-    <select>
-      <option>BNB</option>
-    </select>
-    <input placeholder="Amount to swap" />
-    <select>
-      <option>USDT</option>
-    </select>
-    <button>Swap</button>
-    <p id="walletStatus" style="margin-top: 1rem; color: #00ff99;"></p>
-  </div>
+    <div id="wallet" class="balance"></div>
+    <div id="bnb" class="balance"></div>
+    <button onclick="swapBNBtoToken()">Swap 0.01 BNB to Token</button>
+    <p style="margin-top:20px;color:gray;">This is a demo on BSC Testnet</p>
+  </div>  <script>
+    const tokenAddress = "0xEc0EA1a818050F518D5498ee8456BE219D70161F";
+    const wbnbAddress = "0xae13d989dac2f0debff460ac112a837c89baa7cd";
+    const pancakeRouterTestnet = "0x9ac64cc6e4415144c455bd8e4837fea55603e5c3";
+    let web3, user;
 
-  <script>
     async function connectWallet() {
       if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const account = accounts[0];
-          document.getElementById("walletStatus").innerText = "Wallet connected: " + account;
-        } catch (err) {
-          document.getElementById("walletStatus").innerText = "Connection failed.";
-        }
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await web3.eth.getAccounts();
+        user = accounts[0];
+        document.getElementById("wallet").innerText = `Wallet: ${user}`;
+        getBalance();
       } else {
-        alert("MetaMask not found!");
+        alert("Please install MetaMask");
       }
     }
-  </script>
-</body>
+
+    async function getBalance() {
+      const balance = await web3.eth.getBalance(user);
+      document.getElementById("bnb").innerText = `Balance: ${web3.utils.fromWei(balance)} BNB`;
+    }
+
+    async function swapBNBtoToken() {
+      const router = new web3.eth.Contract([
+        {
+          "inputs": [
+            {"internalType":"uint256","name":"amountOutMin","type":"uint256"},
+            {"internalType":"address[]","name":"path","type":"address[]"},
+            {"internalType":"address","name":"to","type":"address"},
+            {"internalType":"uint256","name":"deadline","type":"uint256"}
+          ],
+          "name":"swapExactETHForTokens",
+          "outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],
+          "stateMutability":"payable",
+          "type":"function"
+        }
+      ], pancakeRouterTestnet);
+
+      const amountIn = web3.utils.toWei("0.01", "ether");
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+      const path = [wbnbAddress, tokenAddress];
+
+      try {
+        await router.methods.swapExactETHForTokens("0", path, user, deadline)
+          .send({ from: user, value: amountIn });
+        alert("Swap Successful");
+        getBalance();
+      } catch (err) {
+        console.error(err);
+        alert("Swap Failed");
+      }
+    }
+  </script></body>
 </html>
